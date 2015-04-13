@@ -1,9 +1,9 @@
-=== MailChimp Add On for Paid Memberships Pro ===
+=== Paid Memberships Pro - MailChimp Add On ===
 Contributors: strangerstudios
 Tags: paid memberships pro, pmpro, mailchimp, email marketing
 Requires at least: 3.5
-Tested up to: 4.0
-Stable tag: 1.0.6
+Tested up to: 4.1.1
+Stable tag: 1.0.7
 
 Sync WordPress Users and PMPro Members with MailChimp lists.
 
@@ -43,6 +43,11 @@ Please visit our premium support site at http://www.paidmembershipspro.com for m
 2. Membership-level specific list subscription settings.
 
 == Changelog ==
+= 1.0.7 =
+* ENHANCEMENT: Mailing Lists section of edit profile page doesn't show up if there are no lists set for "opt-in lists".
+* BUG: Not showing the "additional lists" options on the review page when using PayPal Express/Standard/etc. (Thanks, Christopher Souser)
+* BUG: Fixed some warnings.
+
 = 1.0.6 =
 * BUG: Avoiding warnings when unsubscribing. (Thanks, Adam Shaw)
 

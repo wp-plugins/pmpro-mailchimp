@@ -1,9 +1,9 @@
 <?php
 /*
-Plugin Name: PMPro MailChimp Integration
+Plugin Name: Paid Memberships Pro - MailChimp Add On
 Plugin URI: http://www.paidmembershipspro.com/pmpro-mailchimp/
 Description: Sync your WordPress users and members with MailChimp lists.
-Version: 1.0.6
+Version: 1.0.7
 Author: Stranger Studios
 Author URI: http://www.strangerstudios.com
 */
@@ -84,7 +84,43 @@ function pmpromc_getAPI()
 	return $api;
 }
 
-function pmpromc_add_custom_user_profile_fields( $user ) {
+function pmpromc_add_custom_user_profile_fields( $user ) 
+{
+	$options = get_option("pmpromc_options");
+	$all_lists = get_option("pmpromc_all_lists");	
+	if(!empty($options['additional_lists']))
+		$additional_lists = $options['additional_lists'];
+	else
+		$additional_lists = array();
+		
+	$api = pmpromc_getAPI();
+	
+	if(!empty($api))
+		$lists = $api->lists->getList( array(), 0, 100 );
+	
+	//no lists?
+	if(!empty($lists))
+	{			
+		$additional_lists_array = array();
+
+		foreach ($lists['data'] as $list)
+		{
+			if(!empty($additional_lists))
+			{
+				foreach($additional_lists as $additional_list)
+				{
+					if($list['id'] == $additional_list)	
+					{	
+						$additional_lists_array[] = $list;
+						break;
+					}
+				}
+			}
+		}
+	}
+	
+	if(empty($additional_lists_array))
+		return;
 ?>
 	<h3><?php _e('Opt-in MailChimp Lists', ''); ?></h3>
 	
@@ -94,40 +130,7 @@ function pmpromc_add_custom_user_profile_fields( $user ) {
 				<label for="address"><?php _e('Mailing Lists', 'pmpromc'); ?>
 			</label></th>
 			<td>
-			<?php	
-			$options = get_option("pmpromc_options");
-			$all_lists = get_option("pmpromc_all_lists");
-			$additional_lists = $options['additional_lists'];
-				
-			$api = pmpromc_getAPI();
-			
-			if(!empty($api))
-				$lists = $api->lists->getList( array(), 0, 100 );
-			
-			//no lists?
-			if(!empty($lists))
-			{			
-				$additional_lists_array = array();
-
-				foreach ($lists['data'] as $list)
-				{
-					if(!empty($additional_lists))
-					{
-						foreach($additional_lists as $additional_list)
-						{
-							if($list['id'] == $additional_list)	
-							{	
-								$additional_lists_array[] = $list;
-								break;
-							}
-						}
-					}
-				}
-			}
-
-			//no lists?
-			if(!empty($additional_lists_array))
-			{			
+			<?php
 				global $profileuser;
 				$user_additional_lists = get_user_meta($profileuser->ID,'pmpromc_additional_lists',true);
 						
@@ -145,13 +148,13 @@ function pmpromc_add_custom_user_profile_fields( $user ) {
 						echo "selected='selected'";
 					echo ">" . $list['name'] . "</option>";
 				}
-				echo "</select>";
-			}
+				echo "</select>";			
 			?>												
 			</td>
 		</tr>
 	</table>
-<?php }
+<?php 
+}
 
 //saving additional lists on profile save
 function pmpromc_save_custom_user_profile_fields( $user_id )
@@ -468,6 +471,8 @@ function pmpromc_option_additional_lists(){
 //Dispaly additional list fields on checkout
 function pmpromc_additional_lists_on_checkout()
 {
+	global $pmpro_review;
+	
 	$options = get_option("pmpromc_options");
 	
 	//even have access?
@@ -510,7 +515,7 @@ function pmpromc_additional_lists_on_checkout()
 		return;
 		
 	?>
-	<table id="pmpro_mailing_lists" class="pmpro_checkout top1em" width="100%" cellpadding="0" cellspacing="0" border="0">
+	<table id="pmpro_mailing_lists" class="pmpro_checkout top1em" width="100%" cellpadding="0" cellspacing="0" border="0" <?php if(!empty($pmpro_review)) { ?>style="display: none;"<?php } ?>>
 		<thead>
 		<tr>
 			<th>
@@ -847,7 +852,13 @@ function pmpromc_activation()
 	//defaults
 	if(empty($options))
 	{
-		$options = array("unsubscribe"=>1);
+		$options = array(
+			"api_key"=>"",
+			"double_opt_in" => 0,
+			"unsubscribe"=>1,
+			"users_lists" => array(),
+			"additional_lists"=>array(),
+			);
 		update_option("pmpromc_options", $options);
 	}
 	elseif(!isset($options['unsubscribe']))
@@ -914,3 +925,31 @@ function pmpromc_unsubscribe($list, $user)
 			wp_die($e->getMessage());
 	}
 }
+
+/*
+Function to add links to the plugin action links
+*/
+function pmpromc_add_action_links($links) {
+	
+	$new_links = array(
+			'<a href="' . get_admin_url(NULL, 'options-general.php?page=pmpromc_options') . '">Settings</a>',
+	);
+	return array_merge($new_links, $links);
+}
+add_filter('plugin_action_links_' . plugin_basename(__FILE__), 'pmpromc_add_action_links');
+
+/*
+Function to add links to the plugin row meta
+*/
+function pmpromc_plugin_row_meta($links, $file) {
+	if(strpos($file, 'pmpro-mailchimp.php') !== false)
+	{
+		$new_links = array(
+			'<a href="' . esc_url('http://www.paidmembershipspro.com/add-ons/third-party-integration/pmpro-mailchimp-integration/')  . '" title="' . esc_attr( __( 'View Documentation', 'pmpro' ) ) . '">' . __( 'Docs', 'pmpro' ) . '</a>',
+			'<a href="' . esc_url('http://paidmembershipspro.com/support/') . '" title="' . esc_attr( __( 'Visit Customer Support Forum', 'pmpro' ) ) . '">' . __( 'Support', 'pmpro' ) . '</a>',
+		);
+		$links = array_merge($links, $new_links);
+	}
+	return $links;
+}
+add_filter('plugin_row_meta', 'pmpromc_plugin_row_meta', 10, 2);
